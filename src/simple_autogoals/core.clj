@@ -1,10 +1,14 @@
 (ns simple-autogoals.core
   (:require [clj-http.client :as client]
-            [clj-http.cookies :as cookies])
+            [clj-http.cookies :as cookies]
+            [cheshire.core :as json]
+            [clojure.walk :refer [keywordize-keys]])
   (:gen-class))
 
+(def ^:const ^:private auto-amount-pattern #"auto_transfer=([0-9|.]*)")
+
 (defn- sign-in [username password cookie-store]
-  (println "Attempting to sign-in user:" username)
+  (println "Signing-in user:" username)
   (let [csrf (->> (client/get "https://bank.simple.com/signin"
                               {:cookie-store cookie-store})
                   :body
@@ -19,14 +23,49 @@
               :body
               (.contains "Your username and passphrase don't match"))
         (throw (Exception. "Invalid username and/or passphrase"))
-        (do (println "Successfully signed in")
-            csrf))
+        csrf)
       (catch Exception e
         (println "Could not sign-in" e)
         (throw e)))))
 
+(defn- transfer-to-goal
+  [cookie-store csrf {:keys [name id dollar-amount-to-transfer]}]
+  (println (format "Transferring $%.2f to \"%s\""
+                   dollar-amount-to-transfer
+                   name))
+  (client/post (format "https://bank.simple.com/goals/%s/transactions"
+                       id)
+               {:form-params {:amount (int (* dollar-amount-to-transfer 10000))
+                              :_csrf csrf}
+                :cookie-store cookie-store}))
+
+(defn- should-transfer? [goal]
+  (and (not (:archived goal))
+       (not (:paused goal))
+       (:description goal)
+       (re-find auto-amount-pattern (:description goal))))
+
+(defn- assoc-amount-to-transfer [goal]
+  (assoc goal
+         :dollar-amount-to-transfer
+         (-> (re-find auto-amount-pattern (:description goal))
+             last
+             read-string)))
+
+(defn- get-goals-to-transfer [cookie-store]
+  (println "Getting goals")
+  (->> (client/get "https://bank.simple.com/goals/data"
+                   {:cookie-store cookie-store})
+       :body
+       json/parse-string
+       (map keywordize-keys)
+       (filter should-transfer?)
+       (map assoc-amount-to-transfer)))
+
 (defn -main
   [& args]
   (let [cookie-store (cookies/cookie-store)
-        csrf (sign-in username password cookie-store)]
+        csrf (sign-in username password cookie-store)
+        goals (get-goals-to-transfer cookie-store)]
+    (doall (map (partial transfer-to-goal cookie-store csrf) goals))
     (println "Done")))
