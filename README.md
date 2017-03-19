@@ -41,7 +41,7 @@ Then run `./run.sh`.
 
 For each goal with the `auto_transfer=<amt>` memo set, the specified amount will be transferred.
 
-![pristine-goals](http://i.imgur.com/PXhj8be.png)
+<img src="http://i.imgur.com/PXhj8be.png" width="600">
 
 ```bash
 $ ./run.sh
@@ -53,7 +53,7 @@ Transferring $1.00 to "Fancy dinner"
 Done
 ```
 
-![updated-goals](http://i.imgur.com/dvlipko.png)
+<img src="http://i.imgur.com/dvlipko.png" width="600">
 
 ## Disclaimer
 
