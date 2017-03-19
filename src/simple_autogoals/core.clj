@@ -8,7 +8,7 @@
 (def ^:const ^:private auto-amount-pattern #"auto_transfer=([0-9|.]*)")
 
 (defn- sign-in [username password cookie-store]
-  (println "Signing-in user:" username)
+  (println "Signing-in" username)
   (let [csrf (->> (client/get "https://bank.simple.com/signin"
                               {:cookie-store cookie-store})
                   :body
@@ -50,7 +50,8 @@
          :dollar-amount-to-transfer
          (-> (re-find auto-amount-pattern (:description goal))
              last
-             read-string)))
+             read-string
+             (* 1.0))))
 
 (defn- get-goals-to-transfer [cookie-store]
   (println "Getting goals")
@@ -62,10 +63,12 @@
        (filter should-transfer?)
        (map assoc-amount-to-transfer)))
 
-(defn -main
-  [& args]
-  (let [cookie-store (cookies/cookie-store)
+(defn -main []
+  (let [username (System/getenv "SIMPLE_USERNAME")
+        password (System/getenv "SIMPLE_PASSWORD")
+        cookie-store (cookies/cookie-store)
         csrf (sign-in username password cookie-store)
         goals (get-goals-to-transfer cookie-store)]
+    (println (count goals) "goals to update")
     (doall (map (partial transfer-to-goal cookie-store csrf) goals))
     (println "Done")))
