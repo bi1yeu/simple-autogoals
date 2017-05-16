@@ -1,5 +1,7 @@
 # simple-autogoals
 
+**Note 5/16/17** Simple has changed its API since this project was created -- the requests now generate server errors. I'll remove this note if I ever get around to updating the tool.
+
 This program expands the flexibility of [Simple](https://www.simple.com/)'s [Goals](https://www.simple.com/features/goals) feature.
 
 When a new goal is created in Simple, there are two saving options: (a) Save until a date and (b) Save now.
